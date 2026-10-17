@@ -1,35 +1,59 @@
+const mongoose = require("mongoose");
 const ToDoModel = require("../models/todoModel");
 
-module.exports.getToDo = async (req, res) => {
-  const toDo = await ToDoModel.find();
-  res.send(toDo);
+module.exports.getToDo = async (_req, res) => {
+  const todos = await ToDoModel.find().sort({ _id: -1 }).lean();
+  return res.status(200).json(todos);
 };
 
-// save
 module.exports.saveToDo = async (req, res) => {
-  const { text } = req.body;
+  const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
 
-  ToDoModel.create({ text }).then((data) => {
-    console.log("Add Successfully");
-    console.log(data);
-    res.send(data);
-  });
+  if (!text) {
+    return res.status(400).json({ message: "text is required and cannot be empty" });
+  }
+
+  const todo = await ToDoModel.create({ text });
+  return res.status(201).json(todo);
 };
 
-// udpate
 module.exports.updateToDo = async (req, res) => {
-  const { _id, text } = req.body;
+  const { _id } = req.body || {};
+  const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
 
-  ToDoModel.findByIdAndUpdate(_id, { text })
-    .then(() => res.send("Update Successfully"))
-    .catch((err) => console.log(err));
+  if (!mongoose.isValidObjectId(_id)) {
+    return res.status(400).json({ message: "A valid _id is required" });
+  }
+
+  if (!text) {
+    return res.status(400).json({ message: "text is required and cannot be empty" });
+  }
+
+  const todo = await ToDoModel.findByIdAndUpdate(
+    _id,
+    { text },
+    { new: true, runValidators: true }
+  );
+
+  if (!todo) {
+    return res.status(404).json({ message: "To-do item not found" });
+  }
+
+  return res.status(200).json(todo);
 };
 
-// delete
 module.exports.deleteToDo = async (req, res) => {
-  const { _id, text } = req.body;
+  const { _id } = req.body || {};
 
-  ToDoModel.findByIdAndDelete(_id)
-    .then(() => res.send("Deleted Successfully"))
-    .catch((err) => console.log(err));
+  if (!mongoose.isValidObjectId(_id)) {
+    return res.status(400).json({ message: "A valid _id is required" });
+  }
+
+  const todo = await ToDoModel.findByIdAndDelete(_id);
+
+  if (!todo) {
+    return res.status(404).json({ message: "To-do item not found" });
+  }
+
+  return res.status(200).json({ message: "Deleted Successfully", _id: todo._id });
 };
