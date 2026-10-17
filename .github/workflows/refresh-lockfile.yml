@@ -29,8 +29,10 @@ jobs:
           cache: npm
       - name: Regenerate lockfile from package.json
         run: npm install --package-lock-only --ignore-scripts
-      - name: Apply non-breaking security fixes to lockfile
-        run: npm audit fix --package-lock-only --ignore-scripts
+      - name: Apply available non-breaking security fixes
+        run: npm audit fix --package-lock-only --ignore-scripts || echo "Some advisories require manual review; continuing to save available lockfile fixes."
+      - name: Check production dependencies
+        run: npm audit --omit=dev
       - name: Commit updated lockfile if needed
         run: |
           if ! git diff --quiet -- package-lock.json; then
